@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《红烛泪》- 自定义字幕展示</title>
+    <style>
+        /* 基础样式 */
+        body {
+            font-family: "FangSong", "仿宋", serif;
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            color: #8a0000;
+            overflow-x: hidden;
+            height: 100vh;
+            position: relative;
+        }
+        
+        /* 背景装饰 */
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 70% 30%, rgba(138, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.95) 70%);
+            pointer-events: none;
+            z-index: 1;
+            animation: flicker 8s infinite alternate;
+        }
+        
+        .blood-texture {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48cGF0aCBkPSJNMzAsMzBjMCwwLTMtMTMtMTMtMTNjLTEwLDAtMTQsMTQtMTQsMTQgMCwwLTMsMjMsMTMsMjMgMTYsMCwxNi0xNiwxNi0xNnYzMEg1MFYwSDMwek0xMzAsMzVDMTMwLDM1LDEyNywxOSwxMTcsMTkgYy0xMCwwLTE0LDE0LTE0LDE0IDAsMC0zLDIzLDEzLDIzIDE2LDAsMTYtMTYsMTYtMTZ2MzBIMTUwVjBIMTE1VjM1ek0zMCwxMzVDMzAsMTM1LDI3LDExOSwxNywxMTkgYy0xMCwwLTE0LDE0LTE0LDE0IDAsMC0zLDIzLDEzLDIzIDE2LDAsMTYtMTYsMTYtMTZ2MzBIMTUwVjEwMEgzMnoiIGZpbGw9IiM4YTAwMDAiIG9wYWNpdHk9IjAuMDUiLz48L3N2Zz4=');
+            background-size: 200px 200px;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        /* 高级蜡烛效果 */
+        .candle-container {
+            position: fixed;
+            bottom: 80px;
+            right: 80px;
+            width: 100px;
+            height: 220px;
+            z-index: 10;
+            perspective: 1000px;
+        }
+        
+        .candle-stand {
+            position: absolute;
+            bottom: 0;
+            width: 80px;
+            height: 15px;
+            background-color: #111;
+            border-radius: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            z-index: 1;
+            background-image: radial-gradient(circle at center, #333 0%, #111 70%);
+        }
+        
+        .candle-base {
+            position: absolute;
+            bottom: 15px;
+            width: 40px;
+            height: 180px;
+            background: linear-gradient(to right, #1a1a1a, #2a2a2a, #1a1a1a);
+            border-radius: 20px 20px 0 0;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 
+                inset 0 0 10px rgba(0, 0, 0, 0.5),
+                0 0 10px rgba(138, 0, 0, 0.2);
+            z-index: 2;
+            background-image: 
+                linear-gradient(to right, #1a1a1a, #2a2a2a, #1a1a1a),
+                radial-gradient(circle at 50% 10px, rgba(255,255,255,0.03) 0%, transparent 10%);
+            background-size: 100% 100%, 100% 15px;
+            background-repeat: no-repeat;
+        }
+        
+        .candle-wax {
+            position: absolute;
+            bottom: 195px;
+            width: 36px;
+            height: 30px;
+            background: linear-gradient(to bottom, #333, #1a1a1a);
+            border-radius: 50% 50% 0 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            background-image: 
+                linear-gradient(to bottom, #333, #1a1a1a),
+                radial-gradient(circle at center, rgba(255,255,255,0.03) 0%, transparent 10%);
+            background-size: 100% 100%, 100% 10px;
+            background-repeat: no-repeat;
+        }
+        
+        .candle-wick {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 12px;
+            background-color: #333;
+            z-index: 4;
+            transform-origin: bottom;
+            animation: wick-sway 4s infinite ease-in-out;
+            border-radius: 50%;
+        }
+        
+        .flame {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 22px;
+            height: 30px;
+            background: radial-gradient(circle at 30% 40%, #ffd700 0%, #ff6600 50%, #8a0000 100%);
+            border-radius: 60% 40% 30% 70% / 60% 60% 40% 40%;
+            box-shadow: 
+                0 0 25px rgba(255, 215, 0, 0.8),
+                0 0 45px rgba(255, 215, 0, 0.5),
+                0 0 65px rgba(255, 215, 0, 0.3);
+            animation: flame-flicker 3s infinite alternate,
+                       flame-shape 2s infinite alternate,
+                       flame-wave 2s infinite alternate;
+            opacity: 0.9;
+            z-index: 5;
+        }
+        
+        .flame-glow {
+            position: absolute;
+            top: -55px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 35px;
+            height: 45px;
+            background: radial-gradient(circle at center, rgba(255, 215, 0, 0.3) 0%, rgba(255, 215, 0, 0) 70%);
+            border-radius: 50%;
+            animation: glow-pulse 4s infinite alternate,
+                       glow-float 4s infinite ease-in-out;
+            z-index: 4;
+        }
+        
+        .candle-drip {
+            position: absolute;
+            background: linear-gradient(to bottom, #444, #222);
+            border-radius: 0 0 6px 6px;
+            z-index: 3;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+            opacity: 0.8;
+        }
+        
+        .candle-drip:nth-child(1) {
+            width: 8px;
+            height: 25px;
+            top: 50px;
+            left: 42px;
+            transform: rotate(12deg);
+            animation: drip-melt 8s infinite;
+        }
+        
+        .candle-drip:nth-child(2) {
+            width: 7px;
+            height: 30px;
+            top: 80px;
+            left: 65px;
+            transform: rotate(-8deg);
+            animation: drip-melt 10s infinite 2s;
+        }
+        
+        .candle-drip:nth-child(3) {
+            width: 7px;
+            height: 22px;
+            top: 110px;
+            left: 38px;
+            transform: rotate(18deg);
+            animation: drip-melt 12s infinite 4s;
+        }
+        
+        .candle-drip:nth-child(4) {
+            width: 6px;
+            height: 28px;
+            top: 140px;
+            left: 62px;
+            transform: rotate(-5deg);
+            animation: drip-melt 9s infinite 6s;
+        }
+        
+        /* 字幕容器 */
+        .subtitle-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            z-index: 3;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .subtitle {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            line-height: 1.6;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.8), 0 0 30px rgba(255, 0, 0, 0.5);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1.5s ease, transform 1.5s ease;
+            margin-bottom: 20px;
+        }
+        
+        .subtitle.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .subtitle.fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        
+        /* 控制面板 */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 10;
+        }
+        
+        .control-btn {
+            background-color: rgba(138, 0, 0, 0.3);
+            color: #ffcccc;
+            border: 1px solid rgba(255, 204, 204, 0.2);
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            font-family: "FangSong", "仿宋", serif;
+        }
+        
+        .control-btn:hover {
+            background-color: rgba(138, 0, 0, 0.6);
+            transform: scale(1.05);
+        }
+        
+        /* 编辑器区域 */
+        .editor-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            z-index: 10;
+            background-color: rgba(10, 10, 10, 0.9);
+            border: 1px solid rgba(138, 0, 0, 0.3);
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(138, 0, 0, 0.2);
+            transition: all 0.5s ease;
+            transform: translateY(-150%);
+        }
+        
+        .editor-container.visible {
+            transform: translateY(0);
+        }
+        
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .editor-title {
+            color: #c00000;
+            font-size: 1.2rem;
+        }
+        
+        .close-editor {
+            background: none;
+            border: none;
+            color: #8a0000;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+        
+        .editor textarea {
+            width: 100%;
+            height: 200px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #f0f0f0;
+            border: 1px solid rgba(138, 0, 0, 0.3);
+            border-radius: 5px;
+            padding: 10px;
+            font-family: "FangSong", "仿宋", serif;
+            font-size: 1rem;
+            resize: none;
+        }
+        
+        .editor-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .editor-btn {
+            background-color: rgba(138, 0, 0, 0.3);
+            color: #ffcccc;
+            border: 1px solid rgba(255, 204, 204, 0.2);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: "FangSong", "仿宋", serif;
+        }
+        
+        .editor-btn:hover {
+            background-color: rgba(138, 0, 0, 0.6);
+        }
+        
+        /* 编辑按钮 */
+        .edit-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(138, 0, 0, 0.3);
+            color: #ffcccc;
+            border: 1px solid rgba(255, 204, 204, 0.2);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 9;
+            backdrop-filter: blur(5px);
+            font-family: "FangSong", "仿宋", serif;
+        }
+        
+        .edit-btn:hover {
+            background-color: rgba(138, 0, 0, 0.6);
+            transform: scale(1.05);
+        }
+        
+        /* 音乐控制按钮 */
+        .music-control {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(138, 0, 0, 0.3);
+            color: #ffcccc;
+            border: 1px solid rgba(255, 204, 204, 0.2);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 9;
+            backdrop-filter: blur(5px);
+            font-family: "FangSong", "仿宋", serif;
+        }
+        
+        .music-control:hover {
+            background-color: rgba(138, 0, 0, 0.6);
+            transform: scale(1.05);
+        }
+        
+        /* 设置面板 */
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 120px;
+            background-color: rgba(138, 0, 0, 0.3);
+            color: #ffcccc;
+            border: 1px solid rgba(255, 204, 204, 0.2);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 9;
+            backdrop-filter: blur(5px);
+            font-family: "FangSong", "仿宋", serif;
+        }
+        
+        .settings-btn:hover {
+            background-color: rgba(138, 0, 0, 0.6);
+            transform: scale(1.05);
+        }
+        
+        .settings-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            z-index: 10;
+            background-color: rgba(10, 10, 10, 0.9);
+            border: 1px solid rgba(138, 0, 0, 0.3);
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(138, 0, 0, 0.2);
+            transition: all 0.5s ease;
+            transform: translateY(-150%);
+        }
+        
+        .settings-container.visible {
+            transform: translateY(0);
+        }
+        
+        .settings-title {
+            color: #c00000;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+        
+        .setting-group {
+            margin-bottom: 15px;
+        }
+        
+        .setting-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ffcccc;
+        }
+        
+        .setting-input {
+            width: 100%;
+            padding: 8px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #f0f0f0;
+            border: 1px solid rgba(138, 0, 0, 0.3);
+            border-radius: 5px;
+            font-family: "FangSong", "仿宋", serif;
+        }
+        
+        .setting-color {
+            width: 40px;
+            height: 30px;
+            padding: 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+        
+        .settings-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .settings-btn-save {
+            background-color: rgba(138, 0, 0, 0.6);
+            color: #ffcccc;
+            border: 1px solid rgba(255, 204, 204, 0.2);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: "FangSong", "仿宋", serif;
+        }
+        
+        .settings-btn-save:hover {
+            background-color: rgba(138, 0, 0, 0.8);
+        }
+        
+        .settings-btn-cancel {
+            background-color: rgba(50, 50, 50, 0.6);
+            color: #ffcccc;
+            border: 1px solid rgba(255, 204, 204, 0.2);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: "FangSong", "仿宋", serif;
+        }
+        
+        .settings-btn-cancel:hover {
+            background-color: rgba(70, 70, 70, 0.8);
+        }
+        
+        /* 动画效果 */
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        @keyframes flame-flicker {
+            0%, 100% { 
+                transform: translateX(-50%) scale(1);
+                box-shadow: 0 0 25px rgba(255, 215, 0, 0.8),
+                            0 0 45px rgba(255, 215, 0, 0.5),
+                            0 0 65px rgba(255, 215, 0, 0.3);
+            }
+            50% { 
+                transform: translateX(-50%) scale(1.05);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.6),
+                            0 0 40px rgba(255, 215, 0, 0.4),
+                            0 0 60px rgba(255, 215, 0, 0.2);
+            }
+        }
+        
+        @keyframes flame-shape {
+            0%, 100% { border-radius: 60% 40% 30% 70% / 60% 60% 40% 40%; }
+            25% { border-radius: 70% 30% 20% 80% / 70% 70% 30% 30%; }
+            50% { border-radius: 50% 50% 40% 60% / 50% 50% 50% 50%; }
+            75% { border-radius: 80% 20% 10% 90% / 80% 80% 20% 20%; }
+        }
+        
+        @keyframes flame-wave {
+            0%, 100% { height: 30px; }
+            50% { height: 35px; }
+        }
+        
+        @keyframes glow-pulse {
+            0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.5; transform: translateX(-50%) scale(1.1); }
+        }
+        
+        @keyframes glow-float {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-5px); }
+        }
+        
+        @keyframes wick-sway {
+            0%, 100% { transform: translateX(-50%) rotate(-3deg); }
+            50% { transform: translateX(-50%) rotate(3deg); }
+        }
+        
+        @keyframes drip-melt {
+            0% { height: 0; }
+            10% { height: 25px; }
+            90% { height: 25px; }
+            100% { height: 0; }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .subtitle {
+                font-size: clamp(1.2rem, 5vw, 2rem);
+            }
+            
+            .candle-container {
+                display: none;
+            }
+            
+            .controls {
+                bottom: 20px;
+                gap: 10px;
+            }
+            
+            .control-btn {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .editor-container, .settings-container {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                padding: 10px;
+            }
+            
+            .edit-btn, .music-control, .settings-btn {
+                top: 10px;
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+            
+            .settings-btn {
+                right: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-overlay"></div>
+    <div class="blood-texture"></div>
+    
+    <div class="subtitle-container">
+        <div id="subtitleDisplay" class="subtitle"></div>
+    </div>
+    
+    <div class="candle-container">
+        <div class="candle-stand"></div>
+        <div class="candle-base"></div>
+        <div class="candle-wax"></div>
+        <div class="candle-wick"></div>
+        <div class="flame"></div>
+        <div class="flame-glow"></div>
+        <div class="candle-drip"></div>
+        <div class="candle-drip"></div>
+        <div class="candle-drip"></div>
+        <div class="candle-drip"></div>
+    </div>
+    
+    <div class="controls">
+        <button id="startBtn" class="control-btn">开始播放</button>
+        <button id="pauseBtn" class="control-btn" disabled>暂停</button>
+        <button id="restartBtn" class="control-btn" disabled>重新开始</button>
+    </div>
+    
+    <!-- 编辑器 -->
+    <div class="editor-container" id="editorContainer">
+        <div class="editor-header">
+            <div class="editor-title">编辑《红烛泪》字幕</div>
+            <button class="close-editor" id="closeEditor">×</button>
+        </div>
+        <div class="editor">
+            <textarea id="subtitleEditor" placeholder="在此粘贴您的文档内容，每行将作为一句字幕...">黑暗吞噬了最后一丝光明
+血色的记忆在残梦中浮现
+每一个字都带着痛苦的重量
+在寂静中慢慢沉淀
+时间凝固在那个血色的夜晚
+真相被永远地埋在了心底
+只有痛苦和悔恨
+如同永不熄灭的火焰
+在灵魂深处燃烧
+永不停息</textarea>
+            <div class="editor-actions">
+                <button class="editor-btn" id="saveSubtitles">保存</button>
+                <button class="editor-btn" id="cancelEdit">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 设置面板 -->
+    <div class="settings-container" id="settingsContainer">
+        <div class="settings-title">字幕设置</div>
+        <div class="setting-group">
+            <label class="setting-label" for="displayTime">字幕显示时间（秒）</label>
+            <input type="number" id="displayTime" class="setting-input" min="1" max="20" value="5">
+        </div>
+        <div class="setting-group">
+            <label class="setting-label" for="transitionTime">过渡效果时间（秒）</label>
+            <input type="number" id="transitionTime" class="setting-input" min="0.1" max="5" step="0.1" value="1.5">
+        </div>
+        <div class="setting-group">
+            <label class="setting-label" for="subtitleSize">字幕大小（%）</label>
+            <input type="range" id="subtitleSize" class="setting-input" min="50" max="200" value="100">
+            <div class="setting-value" id="subtitleSizeValue">100%</div>
+        </div>
+        <div class="setting-group">
+            <label class="setting-label" for="subtitleColor">字幕颜色</label>
+            <input type="color" id="subtitleColor" class="setting-color" value="#8a0000">
+        </div>
+        <div class="setting-group">
+            <label class="setting-label" for="shadowColor">文字阴影颜色</label>
+            <input type="color" id="shadowColor" class="setting-color" value="#ff0000">
+        </div>
+        <div class="settings-actions">
+            <button class="settings-btn-save" id="saveSettings">保存设置</button>
+            <button class="settings-btn-cancel" id="cancelSettings">取消</button>
+        </div>
+    </div>
+    
+    <button class="edit-btn" id="openEditor">编辑字幕</button>
+    <button class="music-control" id="musicControl">播放音乐</button>
+    <button class="settings-btn" id="openSettings">设置</button>
+    
+    <!-- 音频元素 -->
+    <audio id="backgroundMusic" loop>
+        <source src="file:///F:/%E8%87%AA%E6%B7%BB%E5%8A%A0%E6%AD%8C%E6%9B%B2/%E5%9B%8D.mp3" type="audio/mpeg">
+        你的浏览器不支持音频播放。
+    </audio>
+    
+    <script>
+        // 字幕内容（初始值）
+        let subtitles = [
+            "黑暗吞噬了最后一丝光明",
+            "血色的记忆在残梦中浮现",
+            "每一个字都带着痛苦的重量",
+            "在寂静中慢慢沉淀",
+            "时间凝固在那个血色的夜晚",
+            "真相被永远地埋在了心底",
+            "只有痛苦和悔恨",
+            "如同永不熄灭的火焰",
+            "在灵魂深处燃烧",
+            "永不停息"
+        ];
+        
+        // 从本地存储加载自定义字幕和设置（如果有）
+        if (localStorage.getItem('customSubtitles')) {
+            subtitles = JSON.parse(localStorage.getItem('customSubtitles'));
+        }
+        
+        // 字幕显示时间配置（秒）
+        let displayTime = localStorage.getItem('displayTime') ? parseFloat(localStorage.getItem('displayTime')) : 5;
+        let transitionTime = localStorage.getItem('transitionTime') ? parseFloat(localStorage.getItem('transitionTime')) : 1.5;
+        
+        // 字幕样式配置
+        let subtitleSize = localStorage.getItem('subtitleSize') ? parseInt(localStorage.getItem('subtitleSize')) : 100;
+        let subtitleColor = localStorage.getItem('subtitleColor') || '#8a0000';
+        let shadowColor = localStorage.getItem('shadowColor') || '#ff0000';
+        
+        // DOM元素
+        const subtitleDisplay = document.getElementById('subtitleDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const editorContainer = document.getElementById('editorContainer');
+        const openEditorBtn = document.getElementById('openEditor');
+        const closeEditorBtn = document.getElementById('closeEditor');
+        const subtitleEditor = document.getElementById('subtitleEditor');
+        const saveSubtitlesBtn = document.getElementById('saveSubtitles');
+        const cancelEditBtn = document.getElementById('cancelEdit');
+        const musicControlBtn = document.getElementById('musicControl');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const settingsContainer = document.getElementById('settingsContainer');
+        const openSettingsBtn = document.getElementById('openSettings');
+        const closeSettingsBtn = document.getElementById('cancelSettings');
+        const saveSettingsBtn = document.getElementById('saveSettings');
+        const displayTimeInput = document.getElementById('displayTime');
+        const transitionTimeInput = document.getElementById('transitionTime');
+        const subtitleSizeInput = document.getElementById('subtitleSize');
+        const subtitleSizeValue = document.getElementById('subtitleSizeValue');
+        const subtitleColorInput = document.getElementById('subtitleColor');
+        const shadowColorInput = document.getElementById('shadowColor');
+        
+        // 状态变量
+        let currentSubtitleIndex = 0;
+        let isPlaying = false;
+        let subtitleTimer = null;
+        let isMusicPlaying = false;
+        
+        // 初始化编辑器内容
+        subtitleEditor.value = subtitles.join('\n');
+        
+        // 初始化设置表单
+        displayTimeInput.value = displayTime;
+        transitionTimeInput.value = transitionTime;
+        subtitleSizeInput.value = subtitleSize;
+        subtitleSizeValue.textContent = `${subtitleSize}%`;
+        subtitleColorInput.value = subtitleColor;
+        shadowColorInput.value = shadowColor;
+        
+        // 应用字幕样式
+        applySubtitleStyles();
+        
+        // 显示下一句字幕
+        function showNextSubtitle() {
+            if (currentSubtitleIndex >= subtitles.length) {
+                // 所有字幕播放完毕
+                subtitleDisplay.classList.remove('active');
+                subtitleDisplay.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    subtitleDisplay.textContent = '';
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    restartBtn.disabled = false;
+                    isPlaying = false;
+                }, transitionTime * 1000);
+                
+                return;
+            }
+            
+            // 清除当前字幕并准备显示新字幕
+            subtitleDisplay.textContent = subtitles[currentSubtitleIndex];
+            subtitleDisplay.classList.remove('active', 'fade-out');
+            
+            // 触发重排，然后添加active类实现淡入效果
+            void subtitleDisplay.offsetWidth;
+            subtitleDisplay.classList.add('active');
+            
+            // 设置淡出定时器
+            subtitleTimer = setTimeout(() => {
+                subtitleDisplay.classList.remove('active');
+                subtitleDisplay.classList.add('fade-out');
+                
+                // 显示下一句
+                currentSubtitleIndex++;
+                setTimeout(showNextSubtitle, transitionTime * 1000);
+            }, displayTime * 1000);
+        }
+        
+        // 开始播放
+        function startPlayback() {
+            if (isPlaying) return;
+            
+            isPlaying = true;
+            startBtn.disabled = true;
+            pauseBtn.disabled = false;
+            restartBtn.disabled = false;
+            
+            // 如果是从头开始
+            if (currentSubtitleIndex === 0) {
+                showNextSubtitle();
+            } else {
+                // 继续播放
+                subtitleDisplay.classList.remove('fade-out');
+                setTimeout(showNextSubtitle, 500);
+            }
+        }
+        
+        // 暂停播放
+        function pausePlayback() {
+            if (!isPlaying) return;
+            
+            isPlaying = false;
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            clearTimeout(subtitleTimer);
+        }
+        
+        // 重新开始
+        function restartPlayback() {
+            isPlaying = false;
+            currentSubtitleIndex = 0;
+            clearTimeout(subtitleTimer);
+            
+            subtitleDisplay.classList.remove('active', 'fade-out');
+            subtitleDisplay.textContent = '';
+            
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            restartBtn.disabled = true;
+        }
+        
+        // 打开编辑器
+        function openEditor() {
+            pausePlayback();
+            editorContainer.classList.add('visible');
+            settingsContainer.classList.remove('visible');
+        }
+        
+        // 关闭编辑器
+        function closeEditor() {
+            editorContainer.classList.remove('visible');
+        }
+        
+        // 保存字幕
+        function saveSubtitles() {
+            const text = subtitleEditor.value.trim();
+            if (text) {
+                subtitles = text.split('\n');
+                localStorage.setItem('customSubtitles', JSON.stringify(subtitles));
+                closeEditor();
+                restartPlayback();
+            }
+        }
+        
+        // 打开设置面板
+        function openSettings() {
+            pausePlayback();
+            settingsContainer.classList.add('visible');
+            editorContainer.classList.remove('visible');
+        }
+        
+        // 关闭设置面板
+        function closeSettings() {
+            settingsContainer.classList.remove('visible');
+        }
+        
+        // 保存设置
+        function saveSettings() {
+            // 保存设置值
+            displayTime = parseFloat(displayTimeInput.value);
+            transitionTime = parseFloat(transitionTimeInput.value);
+            subtitleSize = parseInt(subtitleSizeInput.value);
+            subtitleColor = subtitleColorInput.value;
+            shadowColor = shadowColorInput.value;
+            
+            // 存储到localStorage
+            localStorage.setItem('displayTime', displayTime);
+            localStorage.setItem('transitionTime', transitionTime);
+            localStorage.setItem('subtitleSize', subtitleSize);
+            localStorage.setItem('subtitleColor', subtitleColor);
+            localStorage.setItem('shadowColor', shadowColor);
+            
+            // 应用样式
+            applySubtitleStyles();
+            
+            // 关闭设置面板
+            closeSettings();
+            
+            // 如果正在播放，重新开始以应用新的时间设置
+            if (isPlaying) {
+                restartPlayback();
+                startPlayback();
+            }
+        }
+        
+        // 应用字幕样式
+        function applySubtitleStyles() {
+            subtitleDisplay.style.color = subtitleColor;
+            subtitleDisplay.style.textShadow = `0 0 15px ${shadowColor}80, 0 0 30px ${shadowColor}40`;
+            subtitleDisplay.style.fontSize = `${subtitleSize}%`;
+        }
+        
+        // 实时更新字幕大小显示
+        subtitleSizeInput.addEventListener('input', () => {
+            subtitleSizeValue.textContent = `${subtitleSizeInput.value}%`;
+        });
+        
+        // 控制音乐播放和暂停
+        function controlMusic() {
+            if (isMusicPlaying) {
+                backgroundMusic.pause();
+                musicControlBtn.textContent = '播放音乐';
+            } else {
+                // 尝试播放音乐
+                backgroundMusic.play().catch(error => {
+                    console.error("播放音乐时出错:", error);
+                    alert("无法播放音乐。可能是由于浏览器安全限制或文件路径不正确。");
+                    musicControlBtn.textContent = '播放音乐';
+                    isMusicPlaying = false;
+                    return;
+                });
+                musicControlBtn.textContent = '暂停音乐';
+            }
+            isMusicPlaying = !isMusicPlaying;
+        }
+        
+        // 事件监听
+        startBtn.addEventListener('click', startPlayback);
+        pauseBtn.addEventListener('click', pausePlayback);
+        restartBtn.addEventListener('click', restartPlayback);
+        openEditorBtn.addEventListener('click', openEditor);
+        closeEditorBtn.addEventListener('click', closeEditor);
+        saveSubtitlesBtn.addEventListener('click', saveSubtitles);
+        cancelEditBtn.addEventListener('click', closeEditor);
+        musicControlBtn.addEventListener('click', controlMusic);
+        openSettingsBtn.addEventListener('click', openSettings);
+        closeSettingsBtn.addEventListener('click', closeSettings);
+        saveSettingsBtn.addEventListener('click', saveSettings);
+        
+        // 添加键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (isPlaying) {
+                    pausePlayback();
+                } else if (currentSubtitleIndex === 0) {
+                    startPlayback();
+                } else {
+                    startPlayback();
+                }
+            } else if (e.code === 'KeyR') {
+                restartPlayback();
+            } else if (e.code === 'KeyE' && e.ctrlKey) {
+                openEditor();
+            } else if (e.code === 'KeyM') {
+                controlMusic();
+            } else if (e.code === 'KeyS' && e.ctrlKey) {
+                openSettings();
+            }
+        });
+    </script>
+</body>
+</html>
+    
